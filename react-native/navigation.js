@@ -1,12 +1,15 @@
 import React, { Component } from "react";
 import { Text, View } from "react-native";
 import { TabNavigator } from "react-navigation";
+import { Button } from "react-native-elements";
+
+import Slides from "./components/Slides";
 
 export default class App extends React.Component {
 	render() {
 		const MainNavigator = TabNavigator({
 			Home: {
-				screen: HomeScreen
+				screen: Slides
 			},
 			Content: {
 				screen: ContentScreen
@@ -24,10 +27,22 @@ const HomeScreen = () => {
 	);
 };
 
-const ContentScreen = () => {
+const ContentScreen = props => {
 	return (
 		<View style={styles.container}>
-			<Text>ContentScreen</Text>
+			<Button
+				onPress={() => props.navigation.navigate("Home")}
+				//the navigation object is being passed by default to props
+				title="Navigate back!"
+				raised
+				//rased gives a bit of a box shadow.
+				icon={{
+					name: "squirrel",
+					type: "octicon"
+					//icon needs both name and type to locate it
+				}}
+				buttonStyle={styles.buttonStyle}
+			/>
 		</View>
 	);
 };
@@ -38,5 +53,8 @@ const styles = {
 		backgroundColor: "#fff",
 		alignItems: "center",
 		justifyContent: "center"
+	},
+	buttonStyle: {
+		backgroundColor: "#0288D1"
 	}
 };
