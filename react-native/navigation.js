@@ -1,5 +1,5 @@
 import React, { Component } from "react";
-import { StyleSheet, Text, View } from "react-native";
+import { Text, View } from "react-native";
 import { TabNavigator } from "react-navigation";
 
 export default class App extends React.Component {
@@ -32,11 +32,11 @@ const ContentScreen = () => {
 	);
 };
 
-const styles = StyleSheet.create({
+const styles = {
 	container: {
 		flex: 1,
 		backgroundColor: "#fff",
 		alignItems: "center",
 		justifyContent: "center"
 	}
-});
+};
