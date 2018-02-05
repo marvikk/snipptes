@@ -7,6 +7,7 @@ export const asyncAction = () => async dispatch => {
 
 	if (item) {
 		//Dispatch an action
+		dispatch({ type: ITEM_RECEIVED, payload: item });
 	} else {
 		//do smth else
 	}
