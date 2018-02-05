@@ -1,3 +1,6 @@
+import { AsyncStorage } from "react-native";
+import { Facebook } from "expo";
+
 //AsyncStorage is the same as Local Storage. it returns a promise. example:
 //await AsyncStorage.setItem('myItem', myItem)
 //await AsyncStorage.getItem('myItem')
