@@ -31,3 +31,16 @@ const doLogin = async dispatch => {
 	//if setItem fails we won't despatch the action
 	dispatch({ type: LOGIN_SUCESS, payload: token });
 };
+
+// in actions/index.js:
+// export * from './auth_actions';
+// export * from './other_actions';
+//
+// than import * as actions from '../actions'
+// import { connect } from 'react-redux'
+//
+// function mapStateToProps({ auth }) {
+//   return { token: auth.token };
+// }
+//
+// export default connect(mapStateToProps, actions)(AuthScreen);

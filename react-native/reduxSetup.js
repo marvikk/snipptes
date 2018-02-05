@@ -19,3 +19,16 @@ const store = createStore(
 //import reducers to store. import store to App.js, wrap the return with <Provider stor={store}>...</Provider> from 'react-redux'
 
 export default store;
+
+// in actions/index.js:
+// export * from './auth_actions';
+// export * from './other_actions';
+//
+// than import * as actions from '../actions'
+// import { connect } from 'react-redux'
+//
+// function mapStateToProps({ auth }) {
+//   return { token: auth.token };
+// }
+//
+// export default connect(mapStateToProps, actions)(AuthScreen);
