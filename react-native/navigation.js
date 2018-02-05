@@ -15,11 +15,11 @@ export default class App extends React.Component {
 				screen: ContentScreen
 			}, {
       navigationOptions: {
-				//hides tabs
-        tabBar: { visible: false }
+        tabBar: { visible: false } //hides tabs
+
       },
-			//prevents loading all the components in the nav structure to avoid triggering execution of componentDidMount() and such
-      lazyLoad: true
+      lazyLoad: true 	//prevents loading all the components in the nav structure to avoid triggering execution of componentDidMount() and such
+
     }
 		});
 		return <MainNavigator />;
