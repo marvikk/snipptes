@@ -1,0 +1,22 @@
+/*
+COLORS:
+
+Light green: #7ed56f
+Medium green: #55c57a
+Dark green: #28b485
+
+*/
+
+* {/*universal selector*/
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;/*margin and padding are not added to width or height we define*/
+}
+
+body {
+    font-family: "Lato", sans-serif;/*google fonts from <link href="https://fonts.googleapis.com/css?family=Lato:100,300,400,700,900" rel="stylesheet">
+    */
+    font-weight: 400;
+    font-size: 16px;
+    line-height: 1.7;/*space between lines of text*/
+}
