@@ -14,8 +14,7 @@ Dark green: #28b485
 }
 
 body {
-    font-family: "Lato", sans-serif;/*google fonts from <link href="https://fonts.googleapis.com/css?family=Lato:100,300,400,700,900" rel="stylesheet">
-    */
+    font-family: "Lato", sans-serif;/*google fonts from <link href="https://fonts.googleapis.com/css?family=Lato:100,300,400,700,900" rel="stylesheet">*/
     font-weight: 400;
     font-size: 16px;
     line-height: 1.7;/*space between lines of text*/
