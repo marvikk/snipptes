@@ -13,4 +13,7 @@ componentWillMount() {
   firebase.initializeApp({...config})
 }
 
+- auth:
+firebase.auth().signInWithEmailAndPassword(email, password)
+
 */
