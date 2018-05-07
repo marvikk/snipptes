@@ -1,0 +1,477 @@
+import React, { Component } from 'react';
+import * as THREE from "three";
+import movie from "../movie.mp4";
+
+class Lines extends Component {
+
+    colorWhite = { color: 0xffffff };
+    colorLatency = { color: 0x0000ff };
+    colorEmergency = { color: 0xff0000 };
+    colorBrake = { color: 'yellow' };
+    g = 9.81;
+    miles = 1609.34;
+
+    constructor(props) {
+        super(props);
+        this.MAX_POINTS = 500;
+        this.physicalLines = { leftLine: [], rightLine: [], latencyLine: [], emergencyLine: [], brakeLine: [] };
+        this.renderer = new THREE.WebGLRenderer({ alpha: true });
+        this.scene = new THREE.Scene();
+        this.geometry = new THREE.Geometry();
+        this.material = new THREE.LineBasicMaterial({ color: 0xff0000, linewidth: 2 });
+        this.camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 1, 10000);
+        this.camera.position.set(0, 0, 1000);
+        this.renderer.setSize(window.innerWidth, window.innerHeight);
+        //this.geometry = new THREE.BufferGeometry();
+        //this.geometry.addAttribute('position', new THREE.BufferAttribute(this.positions, 3));
+        //this.geometry.setDrawRange(0, this.drawCount); 
+        //this.positions = new Float32Array(this.MAX_POINTS * 3); // 3 vertices per point
+        // this.drawCount = 2; // draw the first 2 points, only
+        // this.line = new THREE.Line(this.geometry, this.material);
+        //this.scene.add(this.line);       
+    }
+
+    componentDidMount() {
+        this.mount.appendChild(this.renderer.domElement);
+        // this.updatePositions();
+        // this.animate();
+    }
+
+    componentWillReceiveProps(prevProps) {
+        if (this.props.dynamicData !== prevProps.dynamicData || this.props.staticData !== prevProps.staticData) {
+            this.physicalLines = this.calculatePhysicalLines();
+            this.animateLines(this.physicalLines);
+            console.log(this.physicalLines)
+            //this.updateWebGlView();
+        }
+    }
+
+    animateLines = (lineObj) => {
+        //const { leftLine, rightLine, latencyLine, emergencyLine, brakeLine } = lineObj;
+        this.geometry = new THREE.Geometry();
+        for (let key in lineObj) {
+            this.geometry.vertices.push(new THREE.Vector3(lineObj[key][0][0], lineObj[key][0][1]));
+            this.geometry.vertices.push(new THREE.Vector3(lineObj[key][1][0], lineObj[key][1][1]));
+        }
+        this.line = new THREE.Line(this.geometry, this.material);
+        this.scene.add(this.line);
+        this.renderer.render(this.scene, this.camera);
+    }
+
+
+
+    // updatePositions = () => {
+    //     var positions = this.line.geometry.attributes.position.array;
+
+    //     var x = 0,
+    //         y = 0, z = 0, index = 0;
+
+    //     for (var i = 0, l = this.MAX_POINTS; i < l; i++) {
+
+    //         positions[index++] = x;
+    //         positions[index++] = y;
+    //         positions[index++] = z;
+
+    //         x += (Math.random() - 0.5) * 30;
+    //         y += (Math.random() - 0.5) * 30;
+    //         z += (Math.random() - 0.5) * 30;
+
+    //     }
+    // }
+
+    // animate = () => {
+    //     window.requestAnimationFrame(this.animate);
+
+    //     this.drawCount = (this.drawCount + 1) % this.MAX_POINTS;
+
+    //     this.line.geometry.setDrawRange(0, this.drawCount);
+
+    //     if (this.drawCount === 0) {
+
+    //         // periodically, generate new data
+
+    //         this.updatePositions();
+
+    //         this.line.geometry.attributes.position.needsUpdate = true; // required after the first render
+
+    //         this.line.material.color.setHSL(Math.random(), 1, 0.5);
+
+    //     }
+
+    //     this.renderer.render(this.scene, this.camera);
+    // }
+
+
+
+    calculatePhysicalLines() {
+        let result;
+        this.physicalLines = { leftLine: [], rightLine: [], latencyLine: [], brakeLine: [] };
+        let axisCenterWidth = this.props.staticData.VehicleWidth / 2;
+        let actualVehicleSpeedMS = this.convertMilesToMS(this.props.dynamicData.ActualVehicleSpeed);
+        let actualBrakingPower = this.props.dynamicData.ActualBrakingPower;
+        let emergencyDistance = this.calculateEmergencyDistance(actualVehicleSpeedMS);
+        let latencyDistance = this.calculateLatencyDistance(actualVehicleSpeedMS);
+        let brakingDistance = this.calculateBrakingDistance(emergencyDistance, actualBrakingPower);
+        let hudLinesMaxDistance = actualVehicleSpeedMS * this.props.staticData.HudLinesEdge;
+        let leftWheelAngle = this.props.dynamicData.ActualLeftSteeringAngles;
+        let rightWheelAngle = this.props.dynamicData.ActualRightSteeringAngles;
+        let vehicleLength = this.props.staticData.VehicleLengthBetweenAxis;
+
+        if (this.props.dynamicData.RequestedLeftSteeringAnglesSteeringAngles === 0) {
+            result = this.calculateStraightLine(axisCenterWidth, emergencyDistance, latencyDistance, brakingDistance, hudLinesMaxDistance);
+        }
+        else {
+            // result = this.calculateCurvedLines(axisCenterWidth, emergencyDistance, latencyDistance, brakingDistance,hudLinesMaxDistance, vehicleLength, leftWheelAngle, rightWheelAngle);
+        }
+        return result;
+    }
+
+    calculateStraightLine(axisCenterWidth, emergencyDistance, latencyDistance, brakingDistance, hudLinesMaxDistance) {
+
+        let physicalLines = { leftLine: [], rightLine: [], latencyLine: [], emergencyLine: [], brakeLine: [] };
+        //calculate left line starting from left end of front axis to max hud line distance in meters
+        let startLeftPoint = [-axisCenterWidth, 0];
+        let endLeftPoint = [-axisCenterWidth, hudLinesMaxDistance];
+        physicalLines.leftLine.push([startLeftPoint[0], startLeftPoint[1]], [endLeftPoint[0], endLeftPoint[1]]);
+
+        //calculate right line starting from right end of front axis to max hud line distance in meters
+        let startRightPoint = [axisCenterWidth, 0];
+        let endRightPoint = [axisCenterWidth, hudLinesMaxDistance];
+        physicalLines.rightLine.push([startRightPoint[0], startRightPoint[1]], [endRightPoint[0], endRightPoint[1]]);
+
+        //calculate latency distance line diagonal to left and right lines in meters
+        let startLatencyPoint = [-axisCenterWidth, -latencyDistance];
+        let endLatencyPoint = [axisCenterWidth, -latencyDistance];
+        physicalLines.latencyLine.push([startLatencyPoint[0], startLatencyPoint[1]], [endLatencyPoint[0], endLatencyPoint[1]]);
+
+        //calculate emergency distance lines in meters
+        let startEmergencyPoint = [-axisCenterWidth, -emergencyDistance];
+        let endEmergencyPoint = [axisCenterWidth, -emergencyDistance];
+        physicalLines.emergencyLine.push([startEmergencyPoint[0], startEmergencyPoint[1]], [endEmergencyPoint[0], endEmergencyPoint[1]]);
+
+        //
+        let startBrakePoint = [-axisCenterWidth, -brakingDistance];
+        let endBrakePoint = [axisCenterWidth, -brakingDistance];
+        physicalLines.brakeLine.push([startBrakePoint[0], startBrakePoint[1]], [endBrakePoint[0], endBrakePoint[1]]);
+
+        return physicalLines;
+    }
+
+    calculateLatencyDistance(actualVehicleSpeedMS) {
+        return actualVehicleSpeedMS * this.props.dynamicData.ActualLatency / 1000;
+    }
+
+    calculateEmergencyDistance(actualVehicleSpeedMS) {
+        //v*v/(k*this.g)
+        let velocity2 = (actualVehicleSpeedMS * actualVehicleSpeedMS);
+        return (velocity2 / (this.props.dynamicData.CoefficientOfFriction * this.g));
+    }
+
+    calculateBrakingDistance(emergencyDistance, actualBrakingPower) {
+
+        let brakingDistance = 0;
+
+        if (actualBrakingPower > this.props.staticData.BrakingDisplayThreshold)
+            brakingDistance = (emergencyDistance / actualBrakingPower) * 100;
+
+        return brakingDistance;
+    }
+
+    updateWebGlModel(webGlModels, physicalLines) {
+        // the function update webGl models
+        // { leftLine:..., rightLine:..., latencyLine:..., brakeLine:... }
+        // use new lines (after function convertPhysicalToDisplayLines)
+
+        let MAX_POINTS = 2;
+        let x, y, z, index;
+        y = 0;
+        //leftLine
+        let positionsLeftLine = webGlModels.leftLine.geometry.attributes.position.array;//[0, 0, 0,|| 0, 0, 0]
+        index = 0;
+        x = physicalLines.leftLine[0][0];
+        z = physicalLines.leftLine[0][1];
+
+        for (let i = 0, l = MAX_POINTS; i < l; i++) {
+
+            positionsLeftLine[index++] = x;
+            positionsLeftLine[index++] = y;
+            positionsLeftLine[index++] = z;
+
+            x = physicalLines.leftLine[1][0];
+            z = physicalLines.leftLine[1][1];
+        }
+        // console.log(webGlModels.leftLine);
+        // webGlModels.leftLine.geometry.attributes.position.needsUpdate = true; // required after the first renderScene
+
+        //rightLine
+        let positionsRightLine = webGlModels.rightLine.geometry.attributes.position.array;//[0, 0, 0,|| 0, 0, 0]
+        index = 0;
+        x = physicalLines.rightLine[0][0];
+        z = physicalLines.rightLine[0][1];
+
+
+        for (let i = 0, l = MAX_POINTS; i < l; i++) {
+
+            positionsRightLine[index++] = z;
+            positionsRightLine[index++] = y;
+            positionsRightLine[index++] = z;
+
+            x = physicalLines.rightLine[1][0];
+            z = physicalLines.rightLine[1][1];
+        }
+        // console.log(webGlModels.rightLine);
+        //latencyLine
+        let positionsLatencyLine = webGlModels.latencyLine.geometry.attributes.position.array;//[0, 0, 0,|| 0, 0, 0]
+        index = 0;
+        x = physicalLines.latencyLine[0][0];
+        z = physicalLines.latencyLine[0][1];
+
+
+        for (let i = 0, l = MAX_POINTS; i < l; i++) {
+
+            positionsLatencyLine[index++] = x;
+            positionsLatencyLine[index++] = y;
+            positionsLatencyLine[index++] = z;
+
+            x = physicalLines.latencyLine[1][0] * 100;
+            z = physicalLines.latencyLine[1][1];
+        }
+        // console.log(webGlModels.latencyLine);
+
+        //emergencyLine
+        let positionsEmergencyLine = webGlModels.emergencyLine.geometry.attributes.position.array;//[0, 0, 0,|| 0, 0, 0]
+        index = 0;
+        x = physicalLines.emergencyLine[0][0];
+        z = physicalLines.emergencyLine[0][1];
+
+
+        for (let i = 0, l = MAX_POINTS; i < l; i++) {
+
+            positionsEmergencyLine[index++] = x;
+            positionsEmergencyLine[index++] = y;
+            positionsEmergencyLine[index++] = z;
+
+            x = physicalLines.emergencyLine[1][0];
+            z = physicalLines.emergencyLine[1][1];
+        }
+        // console.log(webGlModels.emergencyLine);
+        //brakeLine
+        let positionsBrakeLine = webGlModels.brakeLine.geometry.attributes.position.array;//[0, 0, 0,|| 0, 0, 0]
+        index = 0;
+        x = physicalLines.brakeLine[0][0];
+        z = physicalLines.brakeLine[0][1];
+
+        for (let i = 0, l = MAX_POINTS; i < l; i++) {
+
+            positionsBrakeLine[index++] = x;
+            positionsBrakeLine[index++] = y;
+            positionsBrakeLine[index++] = z;
+
+            x = physicalLines.brakeLine[1][0];
+            z = physicalLines.brakeLine[1][1];
+        }
+        // webGlModels.leftLine.geometry.attributes.position.needsUpdate = true; // required after the first renderScene
+        // webGlModels.rightLine.geometry.attributes.position.needsUpdate = true; // required after the first renderScene
+        // webGlModels.latencyLine.geometry.attributes.position.needsUpdate = true; // required after the first renderScene
+        // webGlModels.emergencyLine.geometry.attributes.position.needsUpdate = true; // required after the first renderScene
+        // webGlModels.brakeLine.geometry.attributes.position.needsUpdate = true; // required after the first renderScene
+        // this.scene.add(webGlModels.leftLine);
+        // this.scene.add(webGlModels.rightLine);
+        // this.scene.add(webGlModels.latencyLine);
+        // this.scene.add(webGlModels.emergencyLine);
+        // this.scene.add(webGlModels.brakeLine);
+        // this.renderScene();
+    }
+
+    updateWebGlView() {
+        //the function update webGl in HTML
+        this.webGlLines.leftLine.geometry.attributes.position.needsUpdate = true; // required after the first renderScene
+        this.webGlLines.rightLine.geometry.attributes.position.needsUpdate = true; // required after the first renderScene
+        this.webGlLines.latencyLine.geometry.attributes.position.needsUpdate = true; // required after the first renderScene
+        this.webGlLines.emergencyLine.geometry.attributes.position.needsUpdate = true; // required after the first renderScene
+        this.webGlLines.brakeLine.geometry.attributes.position.needsUpdate = true; // required after the first renderScene
+        // this.scene.add(this.webGlLines.leftLine);
+        // this.scene.add(this.webGlLines.rightLine);
+        // this.scene.add(this.webGlLines.latencyLine);
+        // this.scene.add(this.webGlLines.emergencyLine);
+        // this.scene.add(this.webGlLines.brakeLine);
+        this.renderer.render(this.scene, this.camera);
+    }
+
+
+    renderScene() {
+        this.renderer.render(this.scene, this.camera);
+    }
+
+    fillWebGlModels() {
+        //{ leftLine:{}, rightLine:{}, latencyLine:{}, brakeLine:{} };
+        let materialLines = new THREE.LineBasicMaterial(this.colorWhite);
+        let materialLatencyLine = new THREE.LineBasicMaterial(this.colorLatency);
+        let materialEmergencyLine = new THREE.LineBasicMaterial(this.colorEmergency);
+        let materialBrakeLine = new THREE.LineBasicMaterial(this.colorBrake);
+
+        // var geometry = new THREE.BufferGeometry();
+        let geometryLeftLine = new THREE.BufferGeometry();
+        let geometryRightLine = new THREE.BufferGeometry();
+        let geometryLatencyLine = new THREE.BufferGeometry();
+        let geometryEmergencyLine = new THREE.BufferGeometry();
+        let geometryBrakeLine = new THREE.BufferGeometry();
+        let MAX_POINTS = 2;
+        let positions = new Float32Array(MAX_POINTS * 3); // 3 vertices per point
+        // draw range
+        let drawCount = 2; // draw the first 2 points, only
+        //leftLine////////////////
+        geometryLeftLine.addAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometryLeftLine.setDrawRange(0, drawCount);
+        let leftLine = new THREE.Line(geometryLeftLine, materialLines);
+        //rightLine////////////////
+        geometryRightLine.addAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometryRightLine.setDrawRange(0, drawCount);
+        let rightLine = new THREE.Line(geometryRightLine, materialLines);
+        //latencyLine////////////////
+        geometryLatencyLine.addAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometryLatencyLine.setDrawRange(0, drawCount);
+        let latencyLine = new THREE.Line(geometryLatencyLine, materialLatencyLine);
+        //emergencyLine////////////////
+        geometryEmergencyLine.addAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometryEmergencyLine.setDrawRange(0, drawCount);
+        let emergencyLine = new THREE.Line(geometryEmergencyLine, materialEmergencyLine);
+        //brakeLine////////////////
+        geometryBrakeLine.addAttribute('position', new THREE.BufferAttribute(positions, 3));
+        geometryBrakeLine.setDrawRange(0, drawCount);
+        let brakeLine = new THREE.Line(geometryBrakeLine, materialBrakeLine);
+
+        return {
+            leftLine: leftLine,
+            rightLine: rightLine,
+            latencyLine: latencyLine,
+            emergencyLine: emergencyLine,
+            brakeLine: brakeLine
+        };
+    }
+
+    convertMilesToMS(velocityInMiles) {
+        return velocityInMiles * this.miles / 3600;
+    }
+
+    toRadians(angle) {
+        return angle * (Math.PI / 180);
+    }
+
+    // calculateCurvedLines(axisCenterWidth, emergencyDistance, latencyDistance, brakingDistance, hudLinesMaxDistance, vehicleLengthBetweenAxis, leftAngle, rightAngle) {
+    //
+    //
+    //     let physicalLines = {leftLine: [], rightLine: [], latencyLine: [], emergencyLine: [], brakeLine: []};
+    //
+    //     //check which angle is inner
+    //     let innerAngle = 0;
+    //     if (leftAngle > 0)
+    //         innerAngle = rightAngle;
+    //     else
+    //         innerAngle = leftAngle;
+    //
+    //     //Inner turn radius  calc
+    //     let innerRadius = vehicleLengthBetweenAxis / Math.tan(Math.abs(this.toRadians(innerAngle)));
+    //
+    //     //Outer turn radius calc
+    //     let outerRadius = Math.sqrt(((innerRadius + axisCenterWidth * 2)*(innerRadius + axisCenterWidth * 2)) + ((vehicleLengthBetweenAxis + this.g)*(vehicleLengthBetweenAxis + this.g)));
+    //
+    //     //Center of coordinates calc
+    //     let centerOfRadiuses = [];
+    //     if (leftAngle > 0)
+    //         centerOfRadiuses.push([innerRadius + axisCenterWidth, 0]);
+    //     else
+    //         centerOfRadiuses.push([(innerRadius + axisCenterWidth) * -1], 0);
+    //
+    //     let curvedPolylineLength = 0;
+    //     let polarAngle = 0;
+    //     let i = 0;
+    //     let xCoord = 0;
+    //     let yCoord = 0;
+    //
+    //
+    //     //if left angle is negative the vehicle is turning left and the left polyline is the inner
+    //     if (leftAngle < 0) {
+    //         //    while (curvedPolylineLength < hudLinesMaxDistance) {
+    //         while (i < 100) {
+    //             polarAngle = polarAngle + 1;
+    //
+    //             //calc inner radius polyline segment
+    //             xCoord = centerOfRadiuses[0] + innerRadius * Math.cos(this.toRadians(polarAngle));
+    //             yCoord = innerRadius * Math.sin(this.toRadians(polarAngle));
+    //
+    //             //Add the line segment point to the inner radius polyline
+    //             physicalLines.leftLine.push([xCoord, yCoord]);
+    //
+    //             //calc outer radius polyline segment
+    //             xCoord = outerRadius * Math.cos(this.toRadians(polarAngle)) - centerOfRadiuses[0];
+    //             yCoord = outerRadius * Math.sin(this.toRadians(polarAngle));
+    //
+    //             //Add the line segment point to the inner radius polyline
+    //             physicalLines.rightLine.push([xCoord, yCoord]);
+    //             i += 1;
+    //         }
+    //     }
+    //     else {
+    //         // the right polyline is the inner
+    //         while (i < 100) {
+    //
+    //             polarAngle = polarAngle + 1;
+    //             xCoord = centerOfRadiuses[0][0] - innerRadius * Math.cos(this.toRadians(polarAngle));
+    //             yCoord = innerRadius * Math.sin(this.toRadians(polarAngle));
+    //
+    //             //Add the line segment point to the inner radius polyline
+    //             physicalLines.rightLine.push([xCoord, yCoord]);
+    //
+    //             //calc outer radius polyline segment
+    //             xCoord = centerOfRadiuses[0][0] - outerRadius * Math.cos(this.toRadians(polarAngle));
+    //             yCoord = outerRadius * Math.sin(this.toRadians(polarAngle));
+    //
+    //             //Add the line segment point to the inner radius polyline
+    //             physicalLines.leftLine.push([xCoord, yCoord]);
+    //
+    //             i += 1;
+    //         }
+    //     }
+    //
+    //     return physicalLines;
+    // }
+
+
+
+    // convertPhysicalToDisplayLines() {
+    //     // the function return object
+    //     // { leftLine:..., rightLine:..., latencyLine:..., brakeLine:... }
+    //     // with display points (pixels)
+    // }
+
+    componentWillUnmount() {
+        this.mount.removeChild(this.renderer.domElement);
+    }
+
+    render() {
+        return (
+            <div className="videoDiv">
+                {/*<video className = "video1" muted controls autoPlay*/}
+                {/*style={{*/}
+                {/*position: 'fixed',*/}
+                {/*right: 0,*/}
+                {/*bottom: 0,*/}
+                {/*minWidth: '100%',*/}
+                {/*minHeight: '100%',*/}
+                {/*width: 'auto',*/}
+                {/*height: 'auto',*/}
+                {/*zIndex: -9999}} >*/}
+                {/*<source src = {movie} type = "video/mp4" />*/}
+
+                {/*</video>*/}
+                <div
+                    style={{ width: '600px', height: '600px' }}
+                    ref={(mount) => { this.mount = mount }}>
+                </div>
+            </div>
+        )
+    }
+}
+
+export default Lines;
