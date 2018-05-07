@@ -13,7 +13,13 @@ componentWillMount() {
   firebase.initializeApp({...config})
 }
 
-- auth:
+- auth example:
 firebase.auth().signInWithEmailAndPassword(email, password)
-
+      .then(this.onLoginSuccess.bind(this))
+      .catch(() => {
+        firebase.auth().createUserWithEmailAndPassword(email, password)
+          .then(this.onLoginSuccess.bind(this))
+          .catch(this.onLoginFail.bind(this));
+      });
+      
 */
