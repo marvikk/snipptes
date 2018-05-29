@@ -1,21 +1,220 @@
-/*
-COLORS:
+import React, { Component } from 'react';
+import bgimage from './img/hero.jpg'
+import logo from './img/logo-white.png'
+import styled, { injectGlobal, keyframes, css, ThemeProvider } from 'styled-components'
 
-Light green: #7ed56f
-Medium green: #55c57a
-Dark green: #28b485
+const theme = {
+  color_primary: '#55c57a',
+  color_primary_light: '#7ed56f',
+  color_primary_dark: '#28b485',
+  color_grey_dark: '#777',
+  color_white: '#fff',
+  color_black: '#000'
+}
 
-*/
-
-* {/*universal selector*/
+injectGlobal`
+  *,
+  *::after,
+  *::before{
     margin: 0;
     padding: 0;
-    box-sizing: border-box;/*margin and padding are not added to width or height we define*/
+    box-sizing: inherit;
+  };
+  body{
+    font-family: 'Lato', sans-serif;
+    font-weight: 400;
+    line-height: 1.7;
+    color: ${props => props.theme.color_grey_dark};
+    padding: 3rem;
+    box-sizing: border-box;
+  };
+  html{
+    font-size: 62.5%;
+  }
+`
+//*::after and *::before pseudo elements have to be specified separately 'cos the don't get the defined behaviour by default
+//border-box makes it so that paddings and borders are not added to the specified width
+//box-sizing: inherit; will take the body setting and spread it all over the elements. good practice
+
+const Header = styled.div`
+    height: 95vh;
+    background-image: ${props => css`linear-gradient(to right bottom, rgba(126, 213, 111, 0.8), rgba(40, 180, 131, 0.8)), url(${bgimage})`};
+    background-size: cover;
+    background-position: top;
+    clip-path: polygon(0 0, 100% 0, 100% 75vh, 0 100%);
+    position: relative;
+`
+//background-size: cover will try to fit the image in the box
+//95vh will leave 5% white space under the pic
+//background-position will keep part of the image still while the rest shrinks
+//clip-path: polygon sets the x, y coordinates for each corner starting top left clockwise in order to crop the image
+//position relative in parent makes it possible for the child to be positioned compared to parent by specifyin position absolute in the child
+const LogoBox = styled.div`
+  position: absolute;
+  top: 4rem;
+  left: 4rem;
+  img{
+    height: 3.5rem;
+  }
+  `
+const moveInLeft = keyframes`
+  0%{
+    opacity:0;
+    transform: translateX(-100px);
+  }
+
+  60%{
+    transform: rotate(45deg)
+  }
+
+  80%{
+    transform: translateX(1rem)
+  }
+
+  100%{
+    opacity:1;
+    transform: translate(0);
+  }
+`
+//best only to ever animate opacity and transform. these are supported best by the browser
+//dont forget to set this above the rule you are using it in
+
+const moveInRight = keyframes`
+  0%{
+    opacity:0;
+    transform: translateX(10rem);
+  }
+
+  60%{
+    transform: rotate(45deg)
+  }
+
+  80%{
+    transform: translateX(-1rem)
+  }
+
+  100%{
+    opacity:1;
+    transform: translate(0);
+  }
+`
+
+const moveInBottom = keyframes`
+  0%{
+    opacity:0;
+    transform: translateY(3rem);
+  }
+
+  100%{
+    opacity:1;
+    transform: translate(0);
+  }
+`
+
+
+const H1 = styled.h1`
+  color:${props => props.theme.color_white};
+  text-transform: uppercase;
+  backface-visibility: hidden;
+  margin-bottom: 6rem;
+`
+//backface-visibility makes it so that the small upwards shake at the end of animations in children is fixed
+
+const H1span = styled.span`
+  display: block;
+  font-size: ${props => props.small ? '2rem' : '6rem'};
+  font-weight: 400;
+  letter-spacing: 3.5rem;
+  animation-name: ${props => props.small ? moveInRight : moveInLeft};
+  letter-spacing: ${props => props.small ? '1.7rem' : ''};
+  animation-duration: 1s;
+  animation-timing-function: ease-out;
+`
+//block elements occupy the entire width that they have available and create line breaks
+//we can also set animation-delay: 3s; which will wait before starting the animation
+//animation-iteration-count:3; will play several times the animation
+//animation-timing-function: ease-in/ease-out; will make the animation to accalarate/slow down over time
+//the animation name, duration and timing can be shortcutted to: animation: moveInRight 1s ease-out
+
+const Textbox = styled.div`
+  position: absolute;
+  top: 40%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+`
+//by default if we absolutly position an element it will place its top-left corner in the middle
+//so if we want the text to be in the middle we need to shift it compared to itself with transform
+
+const Button = styled.button`
+    font-size: 1.6rem;
+    text-decoration:none;
+    text-transform: uppercase;
+    padding: 1.5rem 4rem;
+    color: ${props => props.white ? 'white' : ''};
+    background: ${props => props.bggray ? '#777' : ''}
+    display: inline-block;
+    border-radius: 10rem;
+    outline: none;
+    transition: all .2s;
+    position: relative;
+    animation: ${props => props.animated ? css`${moveInBottom} 0.4s ease-in .75s` : ''};
+    animation-fill-mode: backwards;
+    &:hover{
+      transform: translateY(-3px);
+      box-shadow: 0 1rem 2rem rgba(0,0,0,0.2);
+    }
+    &:active{
+      transform: translateY(-1px);
+      box-shadow: 0 .5rem 1rem rgba(0,0,0,0.2);
+    }
+    &::after{
+      content:'';
+      display: inline-block;
+      width:100%;
+      height:100%;
+      top:0;
+      left:0;
+      background: white;
+      position: absolute;
+      z-index:-1;
+      border-radius: 100px;
+      transition: all .4s;
+    }
+    &:hover::after{
+      transform: scaleX(1.4) scaleY(1.6);
+      opacity: 0;
+    }
+    }
+`
+//in case of padding the first argument is top-bottom, second is left-right
+//display: inline-block; turns element into a block element so we can add padding, width, height better
+//border-radius can be a high number 100-500. dont matter. it will make full round corners
+//outline:none removes the border that appears after clicking the button//
+//translateY(-3px) will move the button up cos the Y line goes from top to bottom. the X left to right
+//transition animates the transform over time. the 'all' props means we open the animation for all props
+//box-shadow: 'shadow on x', 'shadow on y', blur, colour with opacity(black with 20% opacity)
+//animation-fill-mode: backwards; copies the 0% values of moveInBottom so that the button is not visible at page load
+
+class App extends Component {
+  render() {
+    return (
+      <ThemeProvider theme={theme}>
+        <Header>
+          <LogoBox>
+            <img src={logo} alt="logo" />
+          </LogoBox>
+          <Textbox>
+            <H1>
+              <H1span>Outdoors</H1span>
+              <H1span small>Is where life happens</H1span>
+            </H1>
+            <Button href='' animated>discover our tours</Button>
+          </Textbox>
+        </Header>
+      </ThemeProvider>
+    );
+  }
 }
 
-body {
-    font-family: "Lato", sans-serif;/*google fonts from <link href="https://fonts.googleapis.com/css?family=Lato:100,300,400,700,900" rel="stylesheet">*/
-    font-weight: 400;
-    font-size: 16px;
-    line-height: 1.7;/*space between lines of text*/
-}
+export default App;
